@@ -315,21 +315,19 @@ class SearchQuerySet(QuerySet):
                 "%s('%s', %s)" % (function, config, adapt(query))
             )
 
-            full_search_field = "%s.%s" % (
-                qn(self.model._meta.db_table),
-                qn(self.manager.search_field)
-            )
-
             # if fields is passed, obtain a vector expression with
             # these fields. In other case, intent use of search_field if
             # exists.
-            if fields:
-                search_vector = self.manager._get_search_vector(config, using, fields=fields)
-            else:
-                if not self.manager.search_field:
-                    raise ValueError("search_field is not specified")
-
+            if self.manager.search_field and not fields:
+                full_search_field = "%s.%s" % (
+                    qn(self.model._meta.db_table),
+                    qn(self.manager.search_field)
+                )
                 search_vector = full_search_field
+            else:
+                if not fields:
+                    fields = self.manager._fields
+                search_vector = self.manager._get_search_vector(config, using, fields=fields)
 
             where = " (%s) @@ (%s)" % (search_vector, ts_query)
             select_dict, order = {}, []
